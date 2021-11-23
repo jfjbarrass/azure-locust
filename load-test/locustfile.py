@@ -20,7 +20,7 @@ class TfsUser(RestUser):
         self.authenticate(self)
 
     def get_user_data(self):
-        test_data_list = os.listdir("../test-data")
+        test_data_list = os.listdir("./test-data")
         sample_file_path = Random.sample(test_data_list, 1)
         self.user_data = self.get_test_data(sample_file_path)
 
