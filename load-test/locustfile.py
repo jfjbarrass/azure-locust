@@ -1,5 +1,5 @@
 from random import Random
-from locust import task, between
+from locust import task, between, events
 from locust.exception import RescheduleTask
 from locust_plugins.users import RestUser
 from json import JSONDecoder, JSONDecodeError
@@ -7,7 +7,7 @@ from paths import Paths
 import os
 
 class TfsUser(RestUser):
-    wait_time = between(3, 30)
+    wait_time = between(15, 30)
     user_data = {}
     access_token = ""
     identity_api = Paths.domain + Paths.identity_token
@@ -15,20 +15,9 @@ class TfsUser(RestUser):
     proposal_number = ""
     application_status_api = Paths.finance_application_service + Paths.proposal_status
 
-    def on_start(self):
-        self.get_user_data(self)
-        self.authenticate(self)
-
-    def get_user_data(self):
-        test_data_list = os.listdir("./test-data")
-        sample_file_path = Random.sample(test_data_list, 1)
-        self.user_data = self.get_test_data(sample_file_path)
-
-    def get_test_data(path):
-        with open(path, "r") as file:
-            data = file.read()
-
-        return JSONDecoder.loads(data)
+    @events.test_start.add_listener
+    def on_test_start(environment, **kwargs):
+        environment.authenticate(environment)
 
     def authenticate(self):
         with self.client.post(self.identity_api, json = {}) as response:
@@ -40,7 +29,19 @@ class TfsUser(RestUser):
             except KeyError:
                 response.failure("response did not return access token")
 
+    def on_start(self):
+        self.get_user_data(self)
 
+    def get_user_data(self):
+        test_data_list = os.listdir("./test-data")
+        sample_file_path = Random.sample(test_data_list, 1)
+        self.user_data = self.get_test_data(sample_file_path)
+
+    def get_test_data(path):
+        with open(path, "r") as file:
+            data = file.read()
+
+        return JSONDecoder.loads(data)
 
     @task
     def apply(self, test_data):
